@@ -96,18 +96,19 @@ function sync_getusers_fromomega($academicids, $syncinfo, $options = null){
 					mtrace("USER: ".$insertdata->user." TYPE: ".$insertdata->role." COURSE: ".$insertdata->course);
 				}
 			}
-			
-			$generalcoursedata = new stdClass();
-			$generalcoursedata->course = ($insertdata->role == $CFG->sync_teachername) ? $academicid."-PROFESORES" : $academicid."-ALUMNOS";
-			$generalcoursedata->user = $insertdata->user;
-			$generalcoursedata->role = $CFG->sync_studentname;
-			
-			if($insertdata->role != $CFG->sync_noneditingteachername){
-				if(!in_array($generalcoursedata, $metausers)) {
-					$metausers[] = $generalcoursedata;
-					$syncinfo[$academicid]["enrol"] += 1;
-					if ($options) {
-						mtrace("USER: ".$insertdata->user." TYPE: ".$generalcoursedata->role." COURSE: ".$generalcoursedata->course);
+			if($user->UnidadAcademicaId == 1 || $user->UnidadAcademicaId == 2){
+				$generalcoursedata = new stdClass();
+				$generalcoursedata->course = ($insertdata->role == $CFG->sync_teachername) ? $academicid."-PROFESORES" : $academicid."-ALUMNOS";
+				$generalcoursedata->user = $insertdata->user;
+				$generalcoursedata->role = $CFG->sync_studentname;
+				
+				if($insertdata->role != $CFG->sync_noneditingteachername){
+					if(!in_array($generalcoursedata, $metausers)) {
+						$metausers[] = $generalcoursedata;
+						$syncinfo[$academicid]["enrol"] += 1;
+						if ($options) {
+							mtrace("USER: ".$insertdata->user." TYPE: ".$generalcoursedata->role." COURSE: ".$generalcoursedata->course);
+						}
 					}
 				}
 			}
@@ -139,6 +140,7 @@ function sync_getcourses_fromomega($academicids, $syncinfo, $options = null){
 		mtrace("#### Adding Courses ####");
 	}
 	$courses = array();
+	$meta = false;
 	foreach($result as $course) {
 		$insertdata = new stdClass();
 		$insertdata->dataid = $syncinfo[$course->PeriodoAcademicoId]["dataid"];
@@ -156,31 +158,36 @@ function sync_getcourses_fromomega($academicids, $syncinfo, $options = null){
 				mtrace("COURSE: ".$insertdata->shortname." IDNUMBER: ".$insertdata->idnumber." CATEGORY: ".$insertdata->categoryid);
 			}
 		}
+		if($course->UnidadAcademicaId == 1 || $course->UnidadAcademicaId == 2){
+			$meta = true;
+		}
 	}	
 	
-	// Build the academic period's general students course
-	$studentscourse = new StdClass();
-	$studentscourse->dataid = $syncinfo[$academicids]["dataid"];
-	$studentscourse->fullname = "Alumnos ".$syncinfo[$academicids]["periodname"];
-	$studentscourse->shortname = $academicids."-ALUMNOS";
-	$studentscourse->idnumber = NULL;
-	$studentscourse->categoryid = $syncinfo[$academicids]["categoryid"];
-	
-	// Build the academic period's general teachers course
-	$teacherscourse = new StdClass();
-	$teacherscourse->dataid = $syncinfo[$academicids]["dataid"];
-	$teacherscourse->fullname = "Profesores ".$syncinfo[$academicids]["periodname"];
-	$teacherscourse->shortname = $academicids."-PROFESORES";
-	$teacherscourse->idnumber = NULL;
-	$teacherscourse->categoryid = $syncinfo[$academicids]["categoryid"];
-	if ($options) {
-		mtrace("COURSE: ".$studentscourse->shortname." CATEGORY: ".$studentscourse->categoryid);
-		mtrace("COURSE: ".$teacherscourse->shortname." CATEGORY: ".$teacherscourse->categoryid);
+	if($meta){
+		// Build the academic period's general students course
+		$studentscourse = new StdClass();
+		$studentscourse->dataid = $syncinfo[$academicids]["dataid"];
+		$studentscourse->fullname = "Alumnos ".$syncinfo[$academicids]["periodname"];
+		$studentscourse->shortname = $academicids."-ALUMNOS";
+		$studentscourse->idnumber = NULL;
+		$studentscourse->categoryid = $syncinfo[$academicids]["categoryid"];
+		
+		// Build the academic period's general teachers course
+		$teacherscourse = new StdClass();
+		$teacherscourse->dataid = $syncinfo[$academicids]["dataid"];
+		$teacherscourse->fullname = "Profesores ".$syncinfo[$academicids]["periodname"];
+		$teacherscourse->shortname = $academicids."-PROFESORES";
+		$teacherscourse->idnumber = NULL;
+		$teacherscourse->categoryid = $syncinfo[$academicids]["categoryid"];
+		if ($options) {
+			mtrace("COURSE: ".$studentscourse->shortname." CATEGORY: ".$studentscourse->categoryid);
+			mtrace("COURSE: ".$teacherscourse->shortname." CATEGORY: ".$teacherscourse->categoryid);
+		}
+		$courses[] = $studentscourse;
+		$syncinfo[$course->PeriodoAcademicoId]["course"] += 1;
+		$courses[] = $teacherscourse;
+		$syncinfo[$course->PeriodoAcademicoId]["course"] += 1;
 	}
-	$courses[] = $studentscourse;
-	$syncinfo[$course->PeriodoAcademicoId]["course"] += 1;
-	$courses[] = $teacherscourse;
-	$syncinfo[$course->PeriodoAcademicoId]["course"] += 1;
 	
 	return array($courses, $syncinfo);
 }
